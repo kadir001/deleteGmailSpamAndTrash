@@ -1,0 +1,30 @@
+function forceEmptyTrashAndSpam() {
+  permanentlyDeleteQueryStrong_('in:trash');
+  permanentlyDeleteQueryStrong_('in:spam');
+}
+
+function permanentlyDeleteQueryStrong_(query) {
+  var BATCH_SIZE = 50;
+  var threads = GmailApp.search(query, 0, BATCH_SIZE);
+  while (threads && threads.length > 0) {
+    Logger.log('Found ' + threads.length + ' threads for "' + query + '". Permanently deleting...');
+    for (var i = 0; i < threads.length; i++) {
+      try {
+        Gmail.Users.Threads.remove('me', threads[i].getId());
+      } catch (e) {
+        Logger.log('Thread remove failed, trying message fallback: ' + e);
+        try {
+          var msgs = threads[i].getMessages();
+          for (var j = 0; j < msgs.length; j++) {
+            Gmail.Users.Messages.remove('me', msgs[j].getId());
+          }
+        } catch (e2) {
+          Logger.log('Message fallback also failed: ' + e2);
+        }
+      }
+    }
+    Utilities.sleep(1000);
+    threads = GmailApp.search(query, 0, BATCH_SIZE);
+  }
+  Logger.log('Finished clearing "' + query + '"');
+}
